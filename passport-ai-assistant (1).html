@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PassportAI — Smart Document Assistant</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg2: #111827;
+    --bg3: #1a2235;
+    --surface: #1e2d42;
+    --surface2: #243347;
+    --border: rgba(99,179,237,0.15);
+    --border2: rgba(99,179,237,0.3);
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --accent3: #93c5fd;
+    --gold: #f59e0b;
+    --gold2: #fbbf24;
+    --green: #10b981;
+    --green2: #34d399;
+    --red: #ef4444;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo span { color: var(--accent2); }
+
+  .header-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .badge-ai { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(59,130,246,0.3); }
+  .badge-secure { background: rgba(16,185,129,0.15); color: var(--green2); border: 1px solid rgba(16,185,129,0.3); }
+
+  /* LAYOUT */
+  .app-layout {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 60px);
+  }
+
+  /* MAIN PANEL - CHAT */
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .chat-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+
+  .chat-header h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    scroll-behavior: smooth;
+  }
+
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+
+  /* MESSAGES */
+  .msg {
+    display: flex;
+    gap: 10px;
+    animation: msgIn 0.25s ease;
+  }
+
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.user { flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .msg-avatar.ai {
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    color: white;
+    font-size: 12px;
+  }
+
+  .msg-avatar.user {
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 13px;
+  }
+
+  .msg-content {
+    max-width: 75%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .msg-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .msg.ai .msg-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+
+  .msg.user .msg-bubble {
+    background: var(--accent);
+    border-bottom-right-radius: 4px;
+    color: white;
+    text-align: right;
+  }
+
+  .msg-time {
+    font-size: 11px;
+    color: var(--text3);
+    padding: 0 4px;
+  }
+
+  .msg.user .msg-time { text-align: right; }
+
+  /* TYPING INDICATOR */
+  .typing-indicator {
+    display: flex;
+    gap: 10px;
+    padding: 0;
+  }
+
+  .typing-dots {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .typing-dots span {
+    width: 6px;
+    height: 6px;
+    background: var(--text3);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* UPLOAD AREA IN CHAT */
+  .upload-card {
+    background: var(--surface);
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 0.5rem 0;
+  }
+
+  .upload-card:hover, .upload-card.drag-over {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.05);
+  }
+
+  .upload-card input { display: none; }
+
+  .upload-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .upload-card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .upload-card p {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .upload-types {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .doc-type {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--surface2);
+    color: var(--text3);
+    border: 1px solid var(--border);
+  }
+
+  /* EXTRACTED DATA CARD IN CHAT */
+  .extraction-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 0.5rem 0;
+  }
+
+  .extraction-header {
+    padding: 0.75rem 1rem;
+    background: rgba(16,185,129,0.1);
+    border-bottom: 1px solid rgba(16,185,129,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green2);
+  }
+
+  .extraction-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+
+  .extraction-field:last-child { border-bottom: none; }
+
+  .field-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    width: 120px;
+  }
+
+  .field-value {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    flex: 1;
+  }
+
+  .confidence-pill {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .conf-high { background: rgba(16,185,129,0.15); color: var(--green2); }
+  .conf-med { background: rgba(245,158,11,0.15); color: var(--gold2); }
+  .conf-low { background: rgba(239,68,68,0.15); color: #f87171; }
+
+  .edit-field-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+
+  .edit-field-btn:hover { color: var(--accent2); }
+
+  /* CHAT INPUT */
+  .chat-input-area {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .chat-input-wrap {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    transition: border-color 0.15s;
+  }
+
+  .chat-input-wrap:focus-within { border-color: var(--accent); }
+
+  .chat-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    max-height: 100px;
+    line-height: 1.5;
+  }
+
+  .chat-input::placeholder { color: var(--text3); }
+
+  .send-btn {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover { background: var(--accent2); transform: scale(1.05); }
+  .send-btn:disabled { background: var(--surface2); cursor: not-allowed; transform: none; }
+
+  /* RIGHT PANEL - FORM */
+  .form-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg2);
+  }
+
+  .form-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .form-header h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .form-progress {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .form-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+
+  .form-scroll::-webkit-scrollbar { width: 4px; }
+  .form-scroll::-webkit-scrollbar-track { background: transparent; }
+  .form-scroll::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+
+  /* PASSPORT FORM */
+  .passport-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .form-section-title {
+    padding: 0.75rem 1rem;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .form-section-title .section-icon {
+    font-size: 14px;
+  }
+
+  .form-fields {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  .form-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .form-label .required { color: var(--red); }
+
+  .form-input, .form-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    padding: 8px 10px;
+    transition: all 0.15s;
+    width: 100%;
+    outline: none;
+  }
+
+  .form-input:focus, .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  }
+
+  .form-input.filled {
+    border-color: rgba(16,185,129,0.3);
+    background: rgba(16,185,129,0.03);
+  }
+
+  .form-input.auto-filled {
+    border-color: var(--gold);
+    background: rgba(245,158,11,0.05);
+    animation: fillGlow 0.5s ease;
+  }
+
+  @keyframes fillGlow {
+    0% { box-shadow: 0 0 0 4px rgba(245,158,11,0.3); }
+    100% { box-shadow: none; }
+  }
+
+  .form-select option { background: var(--bg2); }
+
+  .form-input::placeholder { color: var(--text3); }
+
+  /* FORM ACTIONS */
+  .form-actions {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .progress-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+  }
+
+  .btn-submit {
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-submit:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,130,246,0.3); }
+  .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-clear {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-size: 13px;
+    padding: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+
+  .btn-clear:hover { border-color: var(--red); color: #f87171; }
+
+  /* STATUS MESSAGES */
+  .status-msg {
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: var(--green2); }
+  .status-warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: var(--gold2); }
+  .status-info { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); color: var(--accent2); }
+
+  /* OCR LOADER */
+  .ocr-loader {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin: 0.5rem 0;
+  }
+
+  .ocr-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ocr-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text3);
+    transition: color 0.3s;
+  }
+
+  .ocr-step.active { color: var(--accent2); }
+  .ocr-step.done { color: var(--green2); }
+
+  .ocr-step-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    border: 1px solid currentColor;
+    flex-shrink: 0;
+  }
+
+  .ocr-step.active .ocr-step-icon {
+    animation: spinPulse 1s infinite;
+  }
+
+  @keyframes spinPulse {
+    0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(59,130,246,0); }
+    100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  }
+
+  /* QUICK REPLY CHIPS */
+  .quick-replies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .quick-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .quick-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent2);
+    background: rgba(59,130,246,0.05);
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 420px;
+    max-width: 90vw;
+    box-shadow: var(--shadow);
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  .modal h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    background: linear-gradient(90deg, var(--accent2), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .modal p {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-btn-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .modal-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+
+  .modal-btn.primary {
+    background: var(--accent);
+    border: none;
+    color: white;
+  }
+
+  .modal-btn.secondary {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+
+  .modal-btn:hover { filter: brightness(1.1); }
+
+  /* IMAGE PREVIEW */
+  .doc-preview {
+    width: 100%;
+    max-height: 180px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  .preview-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0.5rem 0;
+  }
+
+  .preview-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+  }
+
+  .preview-info { flex: 1; }
+  .preview-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .preview-size { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .preview-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; background: rgba(59,130,246,0.15); color: var(--accent2); font-weight: 600; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 13px;
+    color: var(--text);
+    transition: transform 0.3s ease;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ANIMATIONS */
+  .fade-in { animation: msgIn 0.3s ease; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .form-panel { display: none; }
+    .form-panel.mobile-visible { display: flex; position: fixed; inset: 60px 0 0 0; z-index: 50; }
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+  /* FIELD INDICATOR */
+  .field-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+  }
+
+  .fi-filled { background: var(--green); }
+  .fi-empty { background: var(--surface2); }
+  .fi-auto { background: var(--gold); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛂</div>
+    Passport<span>AI</span>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-ai">🤖 AI Agent Active</span>
+    <span class="badge badge-secure">🔒 Secure Session</span>
+  </div>
+</header>
+
+<div class="app-layout">
+  <!-- CHAT PANEL -->
+  <div class="chat-panel">
+    <div class="chat-header">
+      <h2>💬 AI Document Assistant</h2>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+      <div class="chat-input-wrap">
+        <textarea
+          class="chat-input"
+          id="chatInput"
+          rows="1"
+          placeholder="Type a message or confirm your details…"
+        ></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- FORM PANEL -->
+  <div class="form-panel" id="formPanel">
+    <div class="form-header">
+      <h2>📋 Passport Application</h2>
+      <span class="form-progress" id="formProgress">0 / 12 fields</span>
+    </div>
+    <div class="form-scroll">
+      <div class="passport-form" id="passportForm">
+        <!-- Personal Information -->
+        <div class="form-section">
+          <div class="form-section-title">
+            <span class="section-icon">👤</span> Personal Information
+          </div>
+          <div class="form-fields">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label"><span class="field-indicator fi-empty" id="ind-firstName"></span>First Name <span class="required">*</span></label>
+                <input class="form-input" type="text" id="firstName" placeholder="John" oninput="onFieldInput('firstName')">
+              </div>
+              <div class="form-group">
+                <label class="form-label"><span class="field-indicator fi-empty" id="ind-lastName"></span>Last Name <span class="required">*</span></label>
+                <input class="form-input" type="text" id="lastName" placeholder="Doe" oninput="onFieldInput('lastName')">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label"><span class="field-indicator fi-empty" id="ind-dob"></span>Date of Birth <span class="required">*</span></label>
+                <input class="form-input" type="date" id="dob" oninput="onFieldInput('dob')">
+              </div>
+              <div class="form-group">
+                <label class="form-label"><span class="field-indicator fi-empty" id="ind-gender"></span>Gender <span class="required">*</span></label>
+                <select class="form-select" id="gender" onchange="onFieldInput('gender')">
+                  <option value="">Select…</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other / Non-binary</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><span class="field-indicator fi-empty" id="ind-nationality"></span>Nationality <span class="required">*</span></label>
+              <input class="form-input" type="text" id="nationality" placeholder="e.g. Indian" oninput="onFieldInput('nationality')">
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Details -->
+        <div class="form-section">
+          <div class="form-section-title">
+            <span class="section-icon">📞</span> Contact Details
+          </div>
+          <div class="form-fields">
+            <div class="form-group">
+              <label class="form-label"><span class="field-indicator fi-empty" id="ind-email"></span>Email Address <span class="required">*</span></label>
+              <input class="form-input" type="email" id="email" placeholder="john@example.com" oninput="onFieldInput('email')">
+            </div>
+            <div class="form-group">
+              <label class="form-label"><span class="field-indicator fi-empty" id="ind-phone"></span>Phone Number <span class="required">*</span></label>
+              <input class="form-input" type="tel" id="phone" placeholder="+91 98765 43210" oninput="onFieldInput('phone')">
+            </div>
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="form-section">
+          <div class="form-section-title">
+            <span class="section-icon">🏠</span> Address
+          </div>
+          <div class="form-fields">
+            <div class="form-group">
+              <label class="form-label"><span class="field-indicator fi-empty" id="ind-address"></span>Street Address <span class="required">*</span></label>
+              <input class="form-input" type="text" id="address" placeholder="123 Main Street" oninput="onFieldInput('address')">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label"><span class="field-indicator fi-empty" id="ind-city"></span>City <span class="required">*</span></label>
+                <input class="form-input" type="text" id="city" placeholder="Mumbai" oninput="onFieldInput('city')">
+              </div>
+              <div class="form-group">
+                <label class="form-label"><span class="field-indicator fi-empty" id="ind-state"></span>State <span class="required">*</span></label>
+                <input class="form-input" type="text" id="state" placeholder="Maharashtra" oninput="onFieldInput('state')">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label"><span class="field-indicator fi-empty" id="ind-country"></span>Country <span class="required">*</span></label>
+                <input class="form-input" type="text" id="country" placeholder="India" oninput="onFieldInput('country')">
+              </div>
+              <div class="form-group">
+                <label class="form-label"><span class="field-indicator fi-empty" id="ind-postalCode"></span>Postal Code <span class="required">*</span></label>
+                <input class="form-input" type="text" id="postalCode" placeholder="400001" oninput="onFieldInput('postalCode')">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+      <div class="progress-label" id="progressLabel">Upload a document to start auto-filling</div>
+      <button class="btn-submit" id="submitBtn" onclick="submitForm()" disabled>
+        🚀 Submit Passport Application
+      </button>
+      <button class="btn-clear" onclick="clearForm()">↺ Clear all fields</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Submit Modal -->
+<div class="modal-overlay" id="submitModal" style="display:none">
+  <div class="modal">
+    <h3>🎉 Application Submitted!</h3>
+    <p>Your passport application has been successfully submitted. You will receive a confirmation email with your application reference number within 24 hours.</p>
+    <div style="background: var(--surface); border-radius: 8px; padding: 12px; margin-bottom: 1.5rem; font-family: monospace; font-size: 14px; color: var(--accent2); text-align: center;">
+      REF: PA-<span id="refNumber"></span>
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn primary" onclick="closeModal()">Done</button>
+      <button class="modal-btn secondary" onclick="downloadSummary()">📄 Download Summary</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const API_URL = "https://api.anthropic.com/v1/messages";
+let conversationHistory = [];
+let extractedData = null;
+let formState = {
+  firstName: '', lastName: '', dob: '', gender: '',
+  nationality: '', email: '', phone: '',
+  address: '', city: '', state: '', country: '', postalCode: ''
+};
+let uploadedFile = null;
+let uploadedBase64 = null;
+let phase = 'greeting'; // greeting | waiting-upload | ocr-processing | confirming | form-ready | done
+let isThinking = false;
+
+const SYSTEM_PROMPT = `You are PassportAI, an expert passport application assistant. You help users fill out passport applications by extracting information from identity documents (Aadhaar Card, PAN Card, Passport, Driving License, etc.).
+
+Your personality:
+- Friendly, professional, and reassuring
+- Concise but thorough
+- Proactively ask for missing information
+- Always explain what you extracted and why
+
+Your workflow:
+1. Greet the user and explain the process
+2. Ask them to upload their identity document
+3. When they upload, analyze it and extract fields
+4. Return extracted data as JSON in a specific format when you find document info
+5. Ask follow-up questions for missing fields
+6. Confirm all details before form submission
+
+When you detect document content shared as text/OCR data, extract and return JSON like:
+<EXTRACTED_DATA>
+{
+  "firstName": "",
+  "lastName": "",
+  "dob": "",
+  "gender": "",
+  "nationality": "",
+  "address": "",
+  "city": "",
+  "state": "",
+  "country": "",
+  "postalCode": "",
+  "phone": "",
+  "email": "",
+  "idNumber": "",
+  "fatherName": "",
+  "confidence": {
+    "firstName": 0.95,
+    "lastName": 0.95,
+    "dob": 0.9,
+    "gender": 0.85,
+    "nationality": 0.8,
+    "address": 0.7,
+    "city": 0.75,
+    "state": 0.75,
+    "country": 0.9,
+    "postalCode": 0.6,
+    "idNumber": 0.98
+  },
+  "documentType": "Aadhaar Card"
+}
+</EXTRACTED_DATA>
+
+For Indian documents:
+- Aadhaar: Extract name, DOB, gender, address, pincode, aadhaar number
+- PAN Card: Extract name, father name, DOB, PAN number
+- Driving License: Extract name, DOB, address, DL number, validity
+- Passport: Extract all fields including nationality, issue/expiry
+
+For missing fields, set confidence to 0 and value to "".
+Always be conversational and helpful. After showing extracted data, ask the user to confirm or correct any fields.
+Keep messages concise. Use emojis sparingly.`;
+
+// ============================================================
+// CHAT FUNCTIONS
+// ============================================================
+function addMessage(role, content, extras = {}) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const avatarText = role === 'ai' ? 'AI' : 'You';
+  const avatarClass = role === 'ai' ? 'ai' : 'user';
+
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+  div.innerHTML = `
+    <div class="msg-avatar ${avatarClass}">${avatarText}</div>
+    <div class="msg-content">
+      <div class="msg-bubble">${content}</div>
+      ${extras.uploadPreview ? extras.uploadPreview : ''}
+      ${extras.quickReplies ? `<div class="quick-replies">${extras.quickReplies.map(r=>`<button class="quick-chip" onclick="quickReply('${r}')">${r}</button>`).join('')}</div>` : ''}
+      <div class="msg-time">${time}</div>
+    </div>
+  `;
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function addUploadWidget() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = `
+    <div class="msg-avatar ai">AI</div>
+    <div class="msg-content" style="max-width: 90%">
+      <label class="upload-card" id="uploadZone" for="docUpload" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <input type="file" id="docUpload" accept="image/*,.pdf" onchange="handleFileSelect(event)">
+        <div class="upload-icon">📎</div>
+        <h3>Drop your document here or click to browse</h3>
+        <p>Your file stays in your browser — never sent to external servers</p>
+        <div class="upload-types">
+          <span class="doc-type">Aadhaar Card</span>
+          <span class="doc-type">PAN Card</span>
+          <span class="doc-type">Passport</span>
+          <span class="doc-type">Driving License</span>
+          <span class="doc-type">Voter ID</span>
+        </div>
+      </label>
+      <div class="msg-time">${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="msg-avatar ai">AI</div>
+    <div class="msg-content">
+      <div class="typing-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function showOCRLoader() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'ocrLoader';
+  const steps = [
+    { id: 'step1', label: 'Reading document…' },
+    { id: 'step2', label: 'Extracting text (OCR)…' },
+    { id: 'step3', label: 'Identifying fields…' },
+    { id: 'step4', label: 'Verifying confidence…' },
+  ];
+  div.innerHTML = `
+    <div class="msg-avatar ai">AI</div>
+    <div class="msg-content" style="max-width:85%">
+      <div class="ocr-loader">
+        <div class="ocr-steps">
+          ${steps.map(s=>`
+            <div class="ocr-step" id="${s.id}">
+              <div class="ocr-step-icon">○</div>
+              <span>${s.label}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text3)" id="ocrProgressText"></div>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  // Steps are driven by updateOCRStep() called during processing
+}
+
+function removeOCRLoader() {
+  const el = document.getElementById('ocrLoader');
+  if (el) el.remove();
+}
+
+function showExtractionCard(data) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+
+  const fields = [
+    { key: 'firstName', label: 'First Name' },
+    { key: 'lastName', label: 'Last Name' },
+    { key: 'dob', label: 'Date of Birth' },
+    { key: 'gender', label: 'Gender' },
+    { key: 'nationality', label: 'Nationality' },
+    { key: 'address', label: 'Address' },
+    { key: 'city', label: 'City' },
+    { key: 'state', label: 'State' },
+    { key: 'country', label: 'Country' },
+    { key: 'postalCode', label: 'Postal Code' },
+    { key: 'idNumber', label: 'ID Number' },
+  ];
+
+  const rowsHtml = fields.map(f => {
+    const val = data[f.key] || '—';
+    const conf = (data.confidence && data.confidence[f.key]) || 0;
+    const confClass = conf >= 0.8 ? 'conf-high' : conf >= 0.5 ? 'conf-med' : 'conf-low';
+    const confLabel = conf >= 0.8 ? `${Math.round(conf*100)}%` : conf >= 0.5 ? `${Math.round(conf*100)}%` : 'Low';
+    if (!data[f.key]) return '';
+    return `
+      <div class="extraction-field">
+        <span class="field-label">${f.label}</span>
+        <span class="field-value">${val}</span>
+        <span class="confidence-pill ${confClass}">${confLabel}</span>
+        <button class="edit-field-btn" onclick="editField('${f.key}', '${val}')" title="Edit">✎</button>
+      </div>
+    `;
+  }).join('');
+
+  div.innerHTML = `
+    <div class="msg-avatar ai">AI</div>
+    <div class="msg-content" style="max-width:90%">
+      <div class="extraction-card">
+        <div class="extraction-header">
+          ✅ Extracted from ${data.documentType || 'Document'}
+        </div>
+        ${rowsHtml}
+      </div>
+      <div class="msg-time">${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+// ============================================================
+// FILE HANDLING
+// ============================================================
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  document.getElementById('uploadZone').classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  if (!file) return;
+  uploadedFile = file;
+
+  // Show preview in chat
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    uploadedBase64 = e.target.result.split(',')[1];
+    const isImage = file.type.startsWith('image/');
+
+    addMessage('user', `📎 Uploaded: <strong>${file.name}</strong> (${formatBytes(file.size)})${isImage ? `<br><img src="${e.target.result}" class="doc-preview">` : ''}`);
+
+    phase = 'ocr-processing';
+    showOCRLoader();
+
+    // Analyze with Claude Vision
+    setTimeout(() => analyzeDocument(file, e.target.result, isImage), 500);
+  };
+  reader.readAsDataURL(file);
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+// ============================================================
+// AI / OCR ANALYSIS
+// ============================================================
+// ============================================================
+// TESSERACT.JS — in-browser OCR (no server needed)
+// ============================================================
+let tesseractWorker = null;
+
+async function getTesseractWorker() {
+  if (tesseractWorker) return tesseractWorker;
+  // Load Tesseract.js from CDN
+  if (!window.Tesseract) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  tesseractWorker = await Tesseract.createWorker(['eng', 'hin'], 1, {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        const pct = Math.round((m.progress || 0) * 100);
+        const el = document.getElementById('ocrProgressText');
+        if (el) el.textContent = `Reading text… ${pct}%`;
+      }
+    }
+  });
+  return tesseractWorker;
+}
+
+async function runTesseractOCR(dataURL) {
+  const worker = await getTesseractWorker();
+  const result = await worker.recognize(dataURL);
+  return result.data.text;
+}
+
+// ============================================================
+// PARSE RAW OCR TEXT → STRUCTURED FIELDS (via Claude text API)
+// ============================================================
+async function parseOCRTextWithAI(rawText, filename) {
+  const parsePrompt = `You are an expert at extracting structured data from Indian identity documents.
+
+The following is raw OCR text extracted from a document named "${filename}".
+Extract all available fields and return ONLY a JSON object wrapped in <EXTRACTED_DATA> tags.
+
+Raw OCR text:
+"""
+${rawText}
+"""
+
+Rules:
+- For names: split into firstName and lastName. If only one name, put it in firstName.
+- For DOB: convert to YYYY-MM-DD format.
+- For gender: normalize to "Male", "Female", or "Other".
+- For Indian documents: country is "India", nationality is "Indian".
+- For Aadhaar: idNumber is the 12-digit number (formatted as XXXX XXXX XXXX).
+- For PAN: idNumber is the 10-char alphanumeric.
+- Guess documentType from the text (Aadhaar Card, PAN Card, Passport, Driving License, Voter ID).
+- Set confidence 0.95 for clearly printed fields, 0.7 for partially visible, 0.4 for guessed.
+- Leave fields as "" if not found.
+
+<EXTRACTED_DATA>
+{
+  "firstName": "",
+  "lastName": "",
+  "dob": "",
+  "gender": "",
+  "nationality": "Indian",
+  "address": "",
+  "city": "",
+  "state": "",
+  "country": "India",
+  "postalCode": "",
+  "idNumber": "",
+  "fatherName": "",
+  "phone": "",
+  "email": "",
+  "documentType": "",
+  "confidence": {
+    "firstName": 0.0, "lastName": 0.0, "dob": 0.0, "gender": 0.0,
+    "nationality": 0.9, "address": 0.0, "city": 0.0, "state": 0.0,
+    "country": 0.9, "postalCode": 0.0, "idNumber": 0.0
+  }
+}
+</EXTRACTED_DATA>`;
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: parsePrompt }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content[0].text;
+}
+
+// ============================================================
+// MAIN DOCUMENT ANALYSIS — Tesseract first, Claude parses text
+// ============================================================
+async function analyzeDocument(file, dataURL, isImage) {
+  try {
+    // --- Step 1: OCR with Tesseract.js (runs fully in browser) ---
+    updateOCRStep(0, 'active');
+    let rawText = '';
+
+    if (isImage) {
+      updateOCRStep(1, 'active');
+      try {
+        rawText = await runTesseractOCR(dataURL);
+        updateOCRStep(1, 'done');
+      } catch (e) {
+        console.warn('Tesseract failed:', e);
+        updateOCRStep(1, 'done');
+        rawText = ''; // will fall through to manual entry
+      }
+    } else {
+      // PDF: can't OCR in browser easily; ask user to describe or enter manually
+      updateOCRStep(1, 'done');
+    }
+
+    updateOCRStep(0, 'done');
+    updateOCRStep(2, 'active');
+
+    // --- Step 2: Send raw text to Claude for structured parsing ---
+    let responseText = '';
+    const hasUsefulText = rawText.trim().length > 20;
+
+    if (hasUsefulText || !isImage) {
+      const textToSend = hasUsefulText ? rawText : `[PDF file: ${file.name} — user needs to enter details manually]`;
+      try {
+        responseText = await parseOCRTextWithAI(textToSend, file.name);
+      } catch (apiErr) {
+        // Claude API failed (likely CORS or no key) — try regex fallback
+        console.warn('Claude API failed, using regex fallback:', apiErr.message);
+        responseText = regexFallbackExtract(rawText, file.name);
+      }
+    } else {
+      // Image but Tesseract got nothing — also try regex
+      responseText = regexFallbackExtract(rawText || '', file.name);
+    }
+
+    updateOCRStep(2, 'done');
+    updateOCRStep(3, 'active');
+
+    // --- Step 3: Parse the structured JSON ---
+    await new Promise(r => setTimeout(r, 300));
+    updateOCRStep(3, 'done');
+    removeOCRLoader();
+
+    const match = responseText.match(/<EXTRACTED_DATA>([\s\S]*?)<\/EXTRACTED_DATA>/);
+    if (match) {
+      let extracted;
+      try { extracted = JSON.parse(match[1].trim()); }
+      catch(e) { throw new Error('Could not parse extracted JSON'); }
+
+      const hasAnyData = Object.entries(extracted)
+        .filter(([k]) => !['confidence','documentType','nationality','country'].includes(k))
+        .some(([,v]) => v && String(v).trim());
+
+      if (hasAnyData) {
+        extractedData = extracted;
+        showExtractionCard(extracted);
+        autoFillForm(extracted);
+
+        const lowConfFields = Object.entries(extracted.confidence || {})
+          .filter(([k,v]) => v < 0.6 && extracted[k])
+          .map(([k]) => k);
+
+        let msg = `✅ I've extracted the details from your <strong>${extracted.documentType || 'document'}</strong> and auto-filled the form on the right.`;
+        if (lowConfFields.length > 0) {
+          msg += `<br><br>⚠️ These fields had lower confidence and may need review: <strong>${lowConfFields.join(', ')}</strong>. Please verify them.`;
+        }
+        msg += '<br><br>Does everything look correct?';
+
+        addMessage('ai', msg, {
+          quickReplies: ['Yes, all correct!', 'I need to fix something', 'Some fields are missing']
+        });
+
+        conversationHistory.push({ role: 'user', content: `[Uploaded ${file.name}. OCR text: ${rawText.slice(0,500)}]` });
+        conversationHistory.push({ role: 'assistant', content: 'I have extracted and auto-filled the form fields from your document.' });
+        phase = 'confirming';
+        return;
+      }
+    }
+
+    // Nothing useful extracted — show manual entry prompt
+    removeOCRLoader();
+    showManualEntryPrompt(file.name, rawText);
+
+  } catch (err) {
+    removeOCRLoader();
+    console.error('analyzeDocument error:', err);
+    showManualEntryPrompt(file.name, '');
+  }
+}
+
+function updateOCRStep(index, state) {
+  const ids = ['step1','step2','step3','step4'];
+  const id = ids[index];
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = `ocr-step ${state}`;
+  const icon = el.querySelector('.ocr-step-icon');
+  if (icon) icon.textContent = state === 'done' ? '✓' : state === 'active' ? '◉' : '○';
+}
+
+// ============================================================
+// REGEX FALLBACK — extract fields from OCR text without Claude
+// ============================================================
+function regexFallbackExtract(text, filename) {
+  const t = text || '';
+  const doc = detectDocType(filename, t);
+
+  // Name patterns
+  const nameMatch = t.match(/(?:Name|नाम)[:\s]+([A-Z][A-Za-z\s]{2,40})/i)
+    || t.match(/^([A-Z]{2,}\s+[A-Z]{2,}(?:\s+[A-Z]{2,})?)/m);
+  const fullName = nameMatch ? nameMatch[1].trim() : '';
+  const nameParts = fullName.split(/\s+/);
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
+  // DOB
+  const dobMatch = t.match(/(?:DOB|Date of Birth|जन्म)[:\s/]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)
+    || t.match(/(\d{2}[\/\-]\d{2}[\/\-]\d{4})/);
+  let dob = '';
+  if (dobMatch) {
+    const parts = dobMatch[1].split(/[\/\-]/);
+    if (parts[2]?.length === 4) dob = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+    else if (parts[0]?.length === 4) dob = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+  }
+
+  // Gender
+  const gender = /\b(female|महिला|स्त्री)\b/i.test(t) ? 'Female'
+    : /\b(male|पुरुष)\b/i.test(t) ? 'Male' : '';
+
+  // Aadhaar number
+  const aadhaarMatch = t.match(/\b(\d{4}\s?\d{4}\s?\d{4})\b/);
+  // PAN
+  const panMatch = t.match(/\b([A-Z]{5}\d{4}[A-Z])\b/);
+  // Pincode
+  const pinMatch = t.match(/\b(\d{6})\b/);
+  // Phone
+  const phoneMatch = t.match(/\b(?:\+91[\s-]?)?[6-9]\d{9}\b/);
+  // Father's name
+  const fatherMatch = t.match(/(?:Father|S\/O|D\/O|W\/O|पिता)[:\s]+([A-Z][A-Za-z\s]{2,40})/i);
+  // State (Indian states)
+  const states = ['Maharashtra','Delhi','Karnataka','Tamil Nadu','Kerala','Gujarat','Rajasthan','Uttar Pradesh','West Bengal','Bihar','Andhra Pradesh','Telangana','Madhya Pradesh','Punjab','Haryana'];
+  const stateMatch = states.find(s => new RegExp(`\\b${s}\\b`,'i').test(t)) || '';
+  // Address (multi-line block after "Address:")
+  const addrMatch = t.match(/(?:Address|पता)[:\s]+([^\n]{5,}(?:\n[^\n]{3,}){0,3})/i);
+  const address = addrMatch ? addrMatch[1].replace(/\n/g,' ').trim() : '';
+
+  const idNumber = aadhaarMatch ? aadhaarMatch[1] : panMatch ? panMatch[1] : '';
+
+  const conf = {
+    firstName: firstName ? 0.75 : 0,
+    lastName: lastName ? 0.7 : 0,
+    dob: dob ? 0.85 : 0,
+    gender: gender ? 0.8 : 0,
+    nationality: 0.9,
+    address: address ? 0.65 : 0,
+    city: 0,
+    state: stateMatch ? 0.75 : 0,
+    country: 0.9,
+    postalCode: pinMatch ? 0.8 : 0,
+    idNumber: idNumber ? 0.95 : 0
+  };
+
+  const extracted = {
+    firstName, lastName, dob, gender,
+    nationality: 'Indian',
+    address,
+    city: '',
+    state: stateMatch,
+    country: 'India',
+    postalCode: pinMatch ? pinMatch[1] : '',
+    idNumber,
+    fatherName: fatherMatch ? fatherMatch[1].trim() : '',
+    phone: phoneMatch ? phoneMatch[0] : '',
+    email: '',
+    documentType: doc,
+    confidence: conf
+  };
+
+  return `<EXTRACTED_DATA>${JSON.stringify(extracted)}</EXTRACTED_DATA>`;
+}
+
+function detectDocType(filename, text) {
+  const combined = (filename + ' ' + text).toLowerCase();
+  if (/aadhaar|aadhar|uidai|uid/.test(combined)) return 'Aadhaar Card';
+  if (/pan|income.?tax|permanent.?account/.test(combined)) return 'PAN Card';
+  if (/passport/.test(combined)) return 'Passport';
+  if (/driving|licence|license|dl/.test(combined)) return 'Driving License';
+  if (/voter|epic/.test(combined)) return 'Voter ID';
+  return 'Identity Document';
+}
+
+// ============================================================
+// MANUAL ENTRY PROMPT when OCR yields nothing
+// ============================================================
+function showManualEntryPrompt(filename, rawText) {
+  const hadSomeText = rawText && rawText.trim().length > 10;
+  addMessage('ai',
+    hadSomeText
+      ? `I scanned your document and picked up some text, but couldn't confidently identify the fields. This can happen with low-resolution images, handwritten documents, or unusual layouts.<br><br>You can:<br>• <strong>Type your details</strong> directly in the form on the right<br>• <strong>Try a clearer photo</strong> (good lighting, flat surface, all 4 corners visible)<br>• <strong>Tell me your details</strong> here in chat and I'll fill the form for you`
+      : `I wasn't able to read text from this image. Common reasons:<br>• Image is blurry or too small<br>• Poor lighting or glare<br>• Document is at an angle<br><br>You can:<br>• <strong>Retake the photo</strong> in good lighting<br>• <strong>Type your details</strong> in the form on the right<br>• <strong>Tell me your name, DOB, address</strong> etc. in chat — I'll fill it in`,
+    { quickReplies: ['Enter details manually', 'I\'ll type in the form', 'Try another photo'] }
+  );
+  phase = 'waiting-upload';
+
+  // If there was OCR text but parsing failed, offer to show it
+  if (hadSomeText) {
+    addMessage('ai', `Here's the raw text I detected — you can correct it yourself:<br><br><code style="font-size:11px;line-height:1.6;white-space:pre-wrap;display:block;background:var(--surface2);padding:8px;border-radius:6px;color:var(--text2)">${rawText.slice(0,400).replace(/</g,'&lt;')}</code>`);
+  }
+}
+
+function handleNoExtraction(responseText) {
+  addMessage('ai', responseText.replace(/\n/g, '<br>'), {
+    quickReplies: ['Try another document', 'Enter details manually']
+  });
+  phase = 'waiting-upload';
+  conversationHistory.push({ role: 'assistant', content: responseText });
+}
+
+// ============================================================
+// AUTO-FILL FORM
+// ============================================================
+function autoFillForm(data) {
+  const fieldMap = {
+    firstName: 'firstName', lastName: 'lastName',
+    dob: 'dob', gender: 'gender', nationality: 'nationality',
+    email: 'email', phone: 'phone', address: 'address',
+    city: 'city', state: 'state', country: 'country', postalCode: 'postalCode'
+  };
+
+  let filled = 0;
+  Object.entries(fieldMap).forEach(([dataKey, formId]) => {
+    if (data[dataKey]) {
+      const el = document.getElementById(formId);
+      if (el) {
+        el.value = data[dataKey];
+        el.classList.add('auto-filled');
+        setTimeout(() => el.classList.remove('auto-filled'), 600);
+        el.classList.add('filled');
+        updateIndicator(formId, 'auto');
+        formState[formId] = data[dataKey];
+        filled++;
+      }
+    }
+  });
+
+  updateProgress();
+  showToast(`✨ Auto-filled ${filled} fields from your document`);
+}
+
+function onFieldInput(id) {
+  const el = document.getElementById(id);
+  formState[id] = el.value;
+  if (el.value) {
+    el.classList.add('filled');
+    updateIndicator(id, 'filled');
+  } else {
+    el.classList.remove('filled');
+    updateIndicator(id, 'empty');
+  }
+  updateProgress();
+}
+
+function updateIndicator(id, type) {
+  const el = document.getElementById(`ind-${id}`);
+  if (!el) return;
+  el.className = 'field-indicator';
+  if (type === 'auto') el.classList.add('fi-auto');
+  else if (type === 'filled') el.classList.add('fi-filled');
+  else el.classList.add('fi-empty');
+}
+
+function updateProgress() {
+  const fields = Object.keys(formState);
+  const filled = fields.filter(k => formState[k] && formState[k].trim()).length;
+  const pct = Math.round((filled / fields.length) * 100);
+
+  document.getElementById('formProgress').textContent = `${filled} / ${fields.length} fields`;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent =
+    pct === 0 ? 'Upload a document to start auto-filling' :
+    pct < 50 ? `${pct}% complete — keep going!` :
+    pct < 100 ? `${pct}% complete — almost there!` :
+    '✅ All fields complete — ready to submit!';
+
+  document.getElementById('submitBtn').disabled = pct < 80;
+}
+
+function editField(key, currentVal) {
+  const newVal = prompt(`Edit ${key}:`, currentVal);
+  if (newVal !== null) {
+    const el = document.getElementById(key);
+    if (el) {
+      el.value = newVal;
+      el.classList.add('filled');
+      updateIndicator(key, 'filled');
+      formState[key] = newVal;
+      updateProgress();
+      showToast(`✏️ Updated ${key}`);
+
+      // Tell the AI
+      sendMessageSilent(`I corrected the ${key} field to: "${newVal}"`);
+    }
+  }
+}
+
+// ============================================================
+// CHAT SEND
+// ============================================================
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isThinking) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  addMessage('user', text);
+  conversationHistory.push({ role: 'user', content: text });
+
+  await callAI(text);
+}
+
+async function sendMessageSilent(text) {
+  conversationHistory.push({ role: 'user', content: text });
+  // Don't show in chat, just update AI context
+}
+
+function quickReply(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+async function callAI(userMessage) {
+  if (isThinking) return;
+  isThinking = true;
+  document.getElementById('sendBtn').disabled = true;
+  showTyping();
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: conversationHistory
+      })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    removeTyping();
+
+    if (data.error) throw new Error(data.error.message);
+
+    const aiText = data.content[0].text;
+    conversationHistory.push({ role: 'assistant', content: aiText });
+
+    // If AI returned structured data (e.g. from chat-based entry), auto-fill form
+    const dataMatch = aiText.match(/<EXTRACTED_DATA>([\s\S]*?)<\/EXTRACTED_DATA>/);
+    if (dataMatch) {
+      try {
+        const extracted = JSON.parse(dataMatch[1].trim());
+        extractedData = extracted;
+        showExtractionCard(extracted);
+        autoFillForm(extracted);
+        const cleanText = aiText.replace(/<EXTRACTED_DATA>[\s\S]*?<\/EXTRACTED_DATA>/g, '').trim();
+        addMessage('ai', (cleanText || 'I\'ve filled in the form with the details you provided. Does everything look correct?').replace(/\n/g,'<br>'), {
+          quickReplies: ['Yes, all correct!', 'Fix a field', 'Submit now']
+        });
+        phase = 'confirming';
+        return;
+      } catch(e) { /* fall through to normal display */ }
+    }
+
+    // Check for upload trigger
+    const wantsUpload = /upload|document|scan|attach|photo|image/i.test(aiText) && phase === 'greeting';
+
+    const quickReplies = detectQuickReplies(aiText, phase);
+    addMessage('ai', aiText.replace(/\n/g, '<br>'), { quickReplies });
+
+    if (wantsUpload || phase === 'greeting') {
+      phase = 'waiting-upload';
+      setTimeout(addUploadWidget, 300);
+    }
+  } catch (err) {
+    removeTyping();
+    console.error('callAI error:', err);
+    // Friendly error — don't say "connection issue" generically
+    const errMsg = err.message || '';
+    const msg = errMsg.includes('401') ? '⚠️ API key issue — please check your Anthropic API key is valid and has credits.'
+      : errMsg.includes('429') ? '⚠️ Rate limit reached. Please wait a moment and try again.'
+      : errMsg.includes('500') || errMsg.includes('529') ? '⚠️ The AI service is temporarily busy. Please try again in a few seconds.'
+      : `⚠️ Couldn't reach the AI right now (${errMsg || 'network error'}). You can still fill the form manually on the right.`;
+    addMessage('ai', msg, { quickReplies: ['Try again', 'Fill form manually'] });
+  } finally {
+    isThinking = false;
+    document.getElementById('sendBtn').disabled = false;
+  }
+}
+
+function detectQuickReplies(text, phase) {
+  if (phase === 'waiting-upload') return ['I have my Aadhaar card', 'I have my PAN card', 'Enter manually'];
+  if (phase === 'confirming') return ['Yes, all correct!', 'Fix a field', 'Submit now'];
+  if (phase === 'form-ready') return ['Submit application', 'Review form', 'Start over'];
+  return null;
+}
+
+// ============================================================
+// FORM ACTIONS
+// ============================================================
+function submitForm() {
+  const empty = Object.entries(formState).filter(([k,v]) => !v || !v.trim());
+  if (empty.length > 2) {
+    showToast(`⚠️ Please fill in all required fields`);
+    return;
+  }
+
+  const refNo = Math.random().toString(36).substr(2,8).toUpperCase();
+  document.getElementById('refNumber').textContent = refNo;
+  document.getElementById('submitModal').style.display = 'flex';
+
+  addMessage('ai', `🎉 Excellent! Your passport application has been submitted successfully. Reference number: **PA-${refNo}**. You will receive a confirmation email within 24 hours. Is there anything else I can help you with?`);
+  phase = 'done';
+}
+
+function closeModal() {
+  document.getElementById('submitModal').style.display = 'none';
+}
+
+function downloadSummary() {
+  const summary = Object.entries(formState)
+    .map(([k,v]) => `${k}: ${v || 'Not provided'}`)
+    .join('\n');
+  const blob = new Blob([`PASSPORT APPLICATION SUMMARY\n${'='.repeat(40)}\n${summary}`], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'passport-application.txt';
+  a.click();
+  closeModal();
+}
+
+function clearForm() {
+  Object.keys(formState).forEach(k => {
+    formState[k] = '';
+    const el = document.getElementById(k);
+    if (el) { el.value = ''; el.classList.remove('filled', 'auto-filled'); }
+    updateIndicator(k, 'empty');
+  });
+  updateProgress();
+  showToast('↺ Form cleared');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ============================================================
+// TEXTAREA AUTO-RESIZE
+// ============================================================
+document.getElementById('chatInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+
+document.getElementById('chatInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// ============================================================
+// INIT — Greet the user
+// ============================================================
+async function init() {
+  isThinking = true;
+  document.getElementById('sendBtn').disabled = true;
+  showTyping();
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: 'Hello, I want to apply for a passport.' }]
+      })
+    });
+
+    const data = await response.json();
+    removeTyping();
+
+    if (data.error) throw new Error(data.error.message);
+
+    const aiText = data.content[0].text;
+    conversationHistory.push({ role: 'user', content: 'Hello, I want to apply for a passport.' });
+    conversationHistory.push({ role: 'assistant', content: aiText });
+
+    addMessage('ai', aiText.replace(/\n/g, '<br>'), {
+      quickReplies: ['I have my Aadhaar Card', 'I have a PAN Card', 'I have my Passport']
+    });
+
+    phase = 'waiting-upload';
+    setTimeout(addUploadWidget, 400);
+  } catch (err) {
+    removeTyping();
+    addMessage('ai', '👋 Welcome to PassportAI! I\'m your AI-powered passport application assistant. I\'ll help you fill out your passport form automatically by scanning your identity document. Please upload your Aadhaar Card, PAN Card, Passport, or Driving License to get started!', {
+      quickReplies: ['Upload Aadhaar Card', 'Upload PAN Card', 'Enter manually']
+    });
+    phase = 'waiting-upload';
+    setTimeout(addUploadWidget, 400);
+  } finally {
+    isThinking = false;
+    document.getElementById('sendBtn').disabled = false;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
